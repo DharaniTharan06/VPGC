@@ -151,8 +151,7 @@
                 }
             }
         });
-        
-        // VM Form submission
+
         document.getElementById('vmForm').addEventListener('submit', async (e) => {
             e.preventDefault();
             const formData = {
@@ -190,8 +189,6 @@
                 const response = await fetch(`${API_BASE}/optimize`, {method: 'POST'});
                 const result = await response.json();
                 if (!response.ok) throw new Error('Optimization failed');
-
-                // --- FIXED: Using correct key 'transactions_in_block' ---
                 alert(`Optimization complete! Block ${result.block_id} mined with ${result.transactions_in_block} transactions.`);
                 refreshStats();
             } catch (error) {
@@ -204,14 +201,11 @@
                 const response = await fetch(`${API_BASE}/stats`);
                 const stats = await response.json();
                 if (!response.ok) throw new Error('Failed to fetch stats');
-                
-                // --- FIXED: Using correct keys from the updated API ---
+
                 document.getElementById('pendingVMs').textContent = stats.pending_vm_requests;
                 document.getElementById('placedVMs').textContent = stats.placed_vms;
                 document.getElementById('blockchainBlocks').textContent = stats.blockchain_blocks;
                 document.getElementById('pendingTxs').textContent = stats.pending_transactions;
-                
-                // --- FIXED: Logic to handle the corrected 'node_statistics' array ---
                 const labels = stats.node_statistics.map(n => n.node_id);
                 const cpuData = stats.node_statistics.map(n => (n.cpu_utilization * 100).toFixed(1));
                 const memoryData = stats.node_statistics.map(n => (n.memory_utilization * 100).toFixed(1));
@@ -231,8 +225,7 @@
                 const response = await fetch(`${API_BASE}/blockchain`);
                 const info = await response.json();
                 if (!response.ok) throw new Error('Failed to fetch blockchain info');
-                
-                // --- FIXED: Using correct keys and handling null hash ---
+
                 const latestHash = info.latest_block_hash ? info.latest_block_hash.substring(0, 16) + '...' : 'N/A';
                 
                 alert(
@@ -247,9 +240,7 @@
             }
         }
         
-        // Auto-refresh every 30 seconds
         setInterval(refreshStats, 30000);
-        // Initial load
         window.onload = refreshStats;
     </script>
 </body>

@@ -1,6 +1,3 @@
-# Multi-Objective Game Theory VM Placement Optimization with Blockchain
-# Complete Implementation
-
 import numpy as np
 import hashlib
 import json
@@ -11,9 +8,6 @@ from enum import Enum
 import random
 from datetime import datetime
 
-# ===========================
-# 1. DATA STRUCTURES & MODELS
-# ===========================
 
 class ResourceType(Enum):
     CPU = "cpu"
@@ -94,16 +88,12 @@ class PhysicalNode:
         self.storage_used = max(0, self.storage_used - vm.storage_requirement)
         self.network_used = max(0, self.network_used - vm.network_requirement)
 
-# ===========================
-# 2. BLOCKCHAIN IMPLEMENTATION
-# ===========================
-
 @dataclass
 class Transaction:
     tx_id: str
     vm_id: str
     node_id: str
-    action: str  # "allocate", "deallocate", "migrate"
+    action: str  
     timestamp: float
     requester: str
     gas_fee: float
@@ -221,10 +211,6 @@ class Blockchain:
         
         return True
 
-# ===========================
-# 3. GAME THEORY OPTIMIZER
-# ===========================
-
 class GameTheoryOptimizer:
     def __init__(self, nodes: List[PhysicalNode]):
         self.nodes = nodes
@@ -234,14 +220,12 @@ class GameTheoryOptimizer:
         """Calculate utility for placing VM on node"""
         if not node.can_host(vm):
             return -np.inf
-        
-        # Multi-objective utility function
+
         resource_utilization = self._calculate_resource_utilization(vm, node)
         energy_efficiency = self._calculate_energy_efficiency(vm, node)
         load_balancing = self._calculate_load_balancing(vm, node)
-        
-        # Weighted sum of objectives
-        weights = [0.4, 0.3, 0.3]  # Can be adjusted
+
+        weights = [0.4, 0.3, 0.3]  
         utility = (weights[0] * resource_utilization + 
                   weights[1] * energy_efficiency + 
                   weights[2] * load_balancing)
@@ -253,8 +237,7 @@ class GameTheoryOptimizer:
         capacity = node.get_capacity_vector()
         usage_after = node.get_usage_vector() + vm.get_resource_vector()
         utilization = usage_after / capacity
-        
-        # Penalize over-utilization and under-utilization
+
         optimal_utilization = 0.8
         penalty = np.mean(np.abs(utilization - optimal_utilization))
         return 1.0 - penalty
@@ -283,8 +266,7 @@ class GameTheoryOptimizer:
     def nash_equilibrium_placement(self, vms: List[VirtualMachine]) -> Dict[str, str]:
         """Find Nash equilibrium for VM placement"""
         placement = {}
-        
-        # Sort VMs by priority (higher priority first)
+
         sorted_vms = sorted(vms, key=lambda x: x.priority, reverse=True)
         
         for vm in sorted_vms:
@@ -293,9 +275,7 @@ class GameTheoryOptimizer:
             
             for node in self.nodes:
                 utility = self.calculate_utility(vm, node)
-                
-                # Check if this placement affects other players (VMs)
-                # Simple model: each VM tries to maximize its own utility
+
                 if utility > best_utility:
                     best_utility = utility
                     best_node = node
@@ -309,8 +289,7 @@ class GameTheoryOptimizer:
     def pareto_optimal_solutions(self, vms: List[VirtualMachine]) -> List[Dict[str, str]]:
         """Find Pareto-optimal placement solutions"""
         solutions = []
-        
-        # Generate multiple placement strategies
+ 
         strategies = [
             self._greedy_resource_placement,
             self._greedy_energy_placement,
@@ -318,7 +297,6 @@ class GameTheoryOptimizer:
         ]
         
         for strategy in strategies:
-            # Reset node states
             for node in self.nodes:
                 node.cpu_used = node.memory_used = 0.0
                 node.storage_used = node.network_used = 0.0
@@ -326,8 +304,7 @@ class GameTheoryOptimizer:
             placement = strategy(vms)
             if placement:
                 solutions.append(placement)
-        
-        # Filter for Pareto optimality (simplified)
+
         return solutions
     
     def _greedy_resource_placement(self, vms: List[VirtualMachine]) -> Dict[str, str]:
@@ -372,9 +349,6 @@ class GameTheoryOptimizer:
                 best_node.allocate_vm(vm)
         return placement
 
-# ===========================
-# 4. MAIN SYSTEM ORCHESTRATOR
-# ===========================
 
 class VMPlacementSystem:
     def __init__(self, nodes: List[PhysicalNode]):
@@ -387,12 +361,11 @@ class VMPlacementSystem:
     def add_vm_request(self, vm: VirtualMachine) -> bool:
         """Add a new VM placement request"""
         self.vms[vm.vm_id] = vm
-        
-        # Create transaction
+
         tx = Transaction(
             tx_id=f"tx_{len(self.blockchain.pending_transactions)}",
             vm_id=vm.vm_id,
-            node_id="",  # To be determined
+            node_id="",  
             action="request",
             timestamp=time.time(),
             requester=vm.owner,
@@ -405,16 +378,13 @@ class VMPlacementSystem:
     def optimize_placement(self) -> Dict[str, str]:
         """Run game theory optimization and return placement decisions"""
         active_vms = list(self.vms.values())
-        
-        # Reset node states for fresh calculation
+
         for node in self.nodes:
             node.cpu_used = node.memory_used = 0.0
             node.storage_used = node.network_used = 0.0
-        
-        # Find Nash equilibrium placement
+
         placement = self.optimizer.nash_equilibrium_placement(active_vms)
-        
-        # Record placement transactions
+
         for vm_id, node_id in placement.items():
             tx = Transaction(
                 tx_id=f"tx_{len(self.blockchain.pending_transactions)}",
@@ -461,22 +431,17 @@ class VMPlacementSystem:
             'node_statistics': node_stats
         }
 
-# ===========================
-# 5. DEMONSTRATION & TESTING
-# ===========================
 
 def create_sample_data():
     """Create sample nodes and VMs for demonstration"""
-    
-    # Create physical nodes
+
     nodes = [
         PhysicalNode("node_1", 16.0, 32.0, 1000.0, 10.0, 0.15, "DC1"),
         PhysicalNode("node_2", 24.0, 48.0, 2000.0, 15.0, 0.18, "DC1"),
         PhysicalNode("node_3", 32.0, 64.0, 3000.0, 20.0, 0.20, "DC2"),
         PhysicalNode("node_4", 20.0, 40.0, 1500.0, 12.0, 0.16, "DC2")
     ]
-    
-    # Create virtual machines
+
     vms = [
         VirtualMachine("vm_1", 4.0, 8.0, 100.0, 2.0, 5, "user_a"),
         VirtualMachine("vm_2", 6.0, 12.0, 200.0, 3.0, 3, "user_b"),
@@ -500,14 +465,12 @@ def run_demonstration():
     print(f"\n1. System Initialization Complete")
     print(f"   - Created {len(nodes)} physical nodes")
     print(f"   - Prepared {len(vms)} virtual machines")
-    
-    # Add VM requests
+
     print(f"\n2. Adding VM Requests...")
     for vm in vms:
         system.add_vm_request(vm)
         print(f"   - Added VM {vm.vm_id} (CPU: {vm.cpu_requirement}, RAM: {vm.memory_requirement}GB)")
-    
-    # Run optimization
+
     print(f"\n3. Running Game Theory Optimization...")
     placement = system.optimize_placement()
     
@@ -515,16 +478,14 @@ def run_demonstration():
     for vm_id, node_id in placement.items():
         vm = system.vms[vm_id]
         print(f"   - VM {vm_id} -> Node {node_id} (Priority: {vm.priority})")
-    
-    # Mine blockchain block
+
     print(f"\n4. Mining Blockchain Block...")
     block = system.mine_block()
     if block:
         print(f"   - Mined block {block.block_id} with {len(block.transactions)} transactions")
         print(f"   - Block hash: {block.hash[:16]}...")
         print(f"   - Nonce: {block.nonce}")
-    
-    # Show system statistics
+
     print(f"\n5. System Statistics:")
     stats = system.get_system_stats()
     print(f"   - Total VMs: {stats['total_vms']}")
@@ -537,7 +498,6 @@ def run_demonstration():
         print(f"   - {node_stat['node_id']}: CPU={node_stat['cpu_utilization']:.2%}, "
               f"RAM={node_stat['memory_utilization']:.2%}")
     
-    # Verify blockchain integrity
     print(f"\n7. Blockchain Verification:")
     is_valid = system.blockchain.is_valid()
     print(f"   - Blockchain integrity: {'VALID' if is_valid else 'INVALID'}")
@@ -547,15 +507,9 @@ def run_demonstration():
     
     return system
 
-# ===========================
-# 6. MAIN EXECUTION
-# ===========================
 
 if __name__ == "__main__":
-    # Run the demonstration
     system = run_demonstration()
-    
-    # Optional: Interactive mode
     print("\nEntering interactive mode...")
     print("Available commands: stats, placement, blockchain, quit")
     

@@ -22,7 +22,6 @@ class TestBlockchain(unittest.TestCase):
         self.assertEqual(len(self.blockchain.pending_transactions), 0)
     
     def test_blockchain_validation(self):
-        # Add some transactions and mine blocks
         for i in range(3):
             tx = Transaction(f"tx{i}", f"vm{i}", f"node{i}", "allocate", 123456+i, f"user{i}", 0.05)
             self.blockchain.add_transaction(tx)

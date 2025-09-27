@@ -15,7 +15,6 @@ class PhysicalNode:
         self.total_network = network
         self.cost_per_hour = cost
         self.data_center = dc
-        # Available resources will be tracked here
         self.available_cpu = cpu
         self.available_memory = memory
         self.available_storage = storage
@@ -51,7 +50,6 @@ class Blockchain:
     def __init__(self):
         self.chain = []
         self.pending_transactions = []
-        # Create the genesis block
         self.create_genesis_block()
 
     def create_genesis_block(self):
@@ -70,7 +68,7 @@ class Blockchain:
     def mine(self):
         """Mines a new block, adds it to the chain, and clears pending transactions."""
         if not self.pending_transactions:
-            return None # Cannot mine an empty block
+            return None 
 
         latest_block = self.get_latest_block()
         new_block = Block(
@@ -85,17 +83,14 @@ class Blockchain:
     
     def is_valid(self):
         """Placeholder for chain validation logic."""
-        return True # For this example, we assume it's always valid
-
-# In your app.py, replace the ENTIRE VMPlacementSystem class with this one.
-# The rest of the file (Flask routes, etc.) remains the same.
+        return True 
 
 class VMPlacementSystem:
     """Manages the overall system state."""
     def __init__(self, nodes):
         self.nodes = {node.node_id: node for node in nodes}
         self.pending_vm_requests = []
-        self.placed_vms = {} # Track placements: { 'vm_id': 'node_id' }
+        self.placed_vms = {} 
         self.blockchain = Blockchain()
 
     def add_vm_request(self, vm):
@@ -116,13 +111,9 @@ class VMPlacementSystem:
                 if (node.available_cpu >= vm.cpu and 
                     node.available_memory >= vm.memory and
                     node.available_storage >= vm.storage):
-                    
-                    # Deduct resources from the node
                     node.available_cpu -= vm.cpu
                     node.available_memory -= vm.memory
                     node.available_storage -= vm.storage
-                    
-                    # Record placement
                     self.placed_vms[vm.vm_id] = node_id
                     placement_results[vm.vm_id] = node_id
                     vms_to_remove.append(vm)
@@ -130,12 +121,9 @@ class VMPlacementSystem:
                     break
             
             if not placed:
-                placement_results[vm.vm_id] = None # Could not place
+                placement_results[vm.vm_id] = None
 
-        # Remove placed VMs from the pending list
         self.pending_vm_requests = [vm for vm in self.pending_vm_requests if vm not in vms_to_remove]
-        
-        # Log placement result as a transaction
         transaction = {'type': 'PLACEMENT_RESULT', 'placement': placement_results}
         self.blockchain.add_transaction(transaction)
         return placement_results
@@ -143,14 +131,12 @@ class VMPlacementSystem:
     def mine_block(self):
         """Mines a new block with the current pending transactions."""
         return self.blockchain.mine()
-    
-    # --- THIS IS THE FULLY CORRECTED AND EXPANDED METHOD ---
+
     def get_system_stats(self):
         """Returns comprehensive statistics for the frontend dashboard."""
         
         node_stats = []
         for node_id, node in self.nodes.items():
-            # Calculate utilization, avoiding division by zero
             cpu_util = ((node.total_cpu - node.available_cpu) / node.total_cpu) if node.total_cpu > 0 else 0
             mem_util = ((node.total_memory - node.available_memory) / node.total_memory) if node.total_memory > 0 else 0
             
@@ -165,20 +151,13 @@ class VMPlacementSystem:
             'placed_vms': len(self.placed_vms),
             'blockchain_blocks': len(self.blockchain.chain),
             'pending_transactions': len(self.blockchain.pending_transactions),
-            'node_statistics': node_stats # Returns an array as the frontend expects
+            'node_statistics': node_stats 
         }
 
 
 app = Flask(__name__)
 CORS(app)
 
-# --- System Initialization ---
-# IMPORTANT ARCHITECTURAL NOTE:
-# Using a global variable for 'system' state works for simple, single-process
-# development servers. In a production environment with multiple workers (like Gunicorn),
-# each worker would have its own copy, leading to inconsistent data.
-# For production, this state should be managed in a shared database or a
-# distributed cache like Redis.
 nodes = [
     PhysicalNode("node_1", 16.0, 32.0, 1000.0, 10.0, 0.15, "DC1"),
     PhysicalNode("node_2", 24.0, 48.0, 2000.0, 15.0, 0.18, "DC1"),
@@ -194,7 +173,6 @@ def request_vm_placement():
     if not data:
         return jsonify({'success': False, 'error': 'Invalid request. JSON body required.'}), 400
 
-    # --- FIXED: Robust input validation ---
     required_fields = ['vm_id', 'cpu', 'memory', 'storage', 'network', 'priority', 'owner']
     for field in required_fields:
         if field not in data:
@@ -240,7 +218,6 @@ def get_stats():
 @app.route('/api/blockchain', methods=['GET'])
 def get_blockchain_info():
     """Returns information about the blockchain."""
-    # --- FIXED: Safely access latest block hash ---
     latest_block = system.blockchain.get_latest_block()
     latest_block_hash = latest_block.hash if latest_block else None
     
@@ -253,7 +230,4 @@ def get_blockchain_info():
 
 
 if __name__ == '__main__':
-    # host='0.0.0.0' makes the server accessible from any IP address on your network.
-    # debug=True enables auto-reloading and provides detailed error pages.
-    # Do not use debug=True in a production environment.
     app.run(debug=True, host='0.0.0.0', port=5000)
