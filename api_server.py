@@ -2,6 +2,7 @@ import hashlib
 import json
 from time import time
 from flask import Flask, jsonify, request
+from flask_cors import CORS
 
 
 class PhysicalNode:
@@ -169,6 +170,7 @@ class VMPlacementSystem:
 
 
 app = Flask(__name__)
+CORS(app)
 
 # --- System Initialization ---
 # IMPORTANT ARCHITECTURAL NOTE:
