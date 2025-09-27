@@ -1,0 +1,17 @@
+{
+    "blockchain": {
+        "difficulty": 2,
+        "gas_fee_base": 0.01,
+        "block_size_limit": 100
+    },
+    "optimization": {
+        "resource_weight": 0.4,
+        "energy_weight": 0.3,
+        "balance_weight": 0.3,
+        "max_iterations": 1000
+    },
+    "data_center": {
+        "max_nodes": 50,
+        "resource_types": ["cpu", "memory", "storage", "network"]
+    }
+}

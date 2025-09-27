@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VM Placement Dashboard</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            margin: 0;
+            padding: 20px;
+        }
+        .dashboard {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .card {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            padding: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        button {
+            background: linear-gradient(45deg, #ff6b6b, #ff8e53);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 25px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            transform: scale(1.05);
+        }
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 10px;
+            margin-top: 20px;
+        }
+        .stat-item {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 15px;
+            border-radius: 10px;
+            text-align: center;
+        }
+        input {
+            width: calc(100% - 20px);
+            padding: 8px 10px;
+            border-radius: 5px;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <h1 style="text-align: center; margin-bottom: 30px;">VM Placement Optimization Dashboard</h1>
+    
+    <div class="dashboard">
+        <div class="card">
+            <h3>VM Request</h3>
+            <form id="vmForm">
+                <input type="text" id="vmId" placeholder="VM ID" required><br><br>
+                <input type="number" id="cpu" placeholder="CPU Cores" step="0.1" required><br><br>
+                <input type="number" id="memory" placeholder="Memory (GB)" step="0.1" required><br><br>
+                <input type="number" id="storage" placeholder="Storage (GB)" required><br><br>
+                <input type="number" id="network" placeholder="Network (Gbps)" step="0.1" required><br><br>
+                <input type="number" id="priority" placeholder="Priority (1-5)" min="1" max="5" required><br><br>
+                <input type="text" id="owner" placeholder="Owner" required><br><br>
+                <button type="submit">Request VM</button>
+            </form>
+        </div>
+        
+        <div class="card">
+            <h3>System Control</h3>
+            <button onclick="optimizePlacement()">Optimize & Mine Block</button>
+            <button onclick="refreshStats()">Refresh Stats</button>
+            <button onclick="showBlockchain()">Blockchain Info</button>
+        </div>
+        
+        <div class="card" style="grid-column: 1 / -1;">
+            <h3>Node Utilization</h3>
+            <canvas id="utilizationChart" width="400" height="150"></canvas>
+        </div>
+        
+        <div class="card" style="grid-column: 1 / -1;">
+            <h3>System Statistics</h3>
+            <div id="stats" class="stats">
+                <div class="stat-item">
+                    <h4>Pending VMs</h4>
+                    <span id="pendingVMs">0</span>
+                </div>
+                <div class="stat-item">
+                    <h4>Placed VMs</h4>
+                    <span id="placedVMs">0</span>
+                </div>
+                <div class="stat-item">
+                    <h4>Blockchain Blocks</h4>
+                    <span id="blockchainBlocks">0</span>
+                </div>
+                <div class="stat-item">
+                    <h4>Pending TXs</h4>
+                    <span id="pendingTxs">0</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://127.0.0.1:5000/api';
+        
+        // Initialize chart
+        const ctx = document.getElementById('utilizationChart').getContext('2d');
+        const utilizationChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: [],
+                datasets: [{
+                    label: 'CPU Utilization %',
+                    data: [],
+                    backgroundColor: 'rgba(255, 107, 107, 0.8)',
+                }, {
+                    label: 'Memory Utilization %',
+                    data: [],
+                    backgroundColor: 'rgba(78, 205, 196, 0.8)',
+                }]
+            },
+            options: {
+                responsive: true,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        max: 100,
+                        ticks: { color: 'white' }
+                    },
+                    x: {
+                        ticks: { color: 'white' }
+                    }
+                },
+                plugins: {
+                    legend: {
+                        labels: { color: 'white' }
+                    }
+                }
+            }
+        });
+        
+        // VM Form submission
+        document.getElementById('vmForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const formData = {
+                vm_id: document.getElementById('vmId').value,
+                cpu: parseFloat(document.getElementById('cpu').value),
+                memory: parseFloat(document.getElementById('memory').value),
+                storage: parseInt(document.getElementById('storage').value),
+                network: parseFloat(document.getElementById('network').value),
+                priority: parseInt(document.getElementById('priority').value),
+                owner: document.getElementById('owner').value
+            };
+            
+            try {
+                const response = await fetch(`${API_BASE}/vm/request`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(formData)
+                });
+                
+                const result = await response.json();
+                if (!response.ok) {
+                    throw new Error(result.error || 'Request failed');
+                }
+
+                alert(`VM ${result.vm_id} request submitted!`);
+                document.getElementById('vmForm').reset();
+                refreshStats();
+            } catch (error) {
+                alert('Error submitting VM request: ' + error.message);
+            }
+        });
+        
+        async function optimizePlacement() {
+            try {
+                const response = await fetch(`${API_BASE}/optimize`, {method: 'POST'});
+                const result = await response.json();
+                if (!response.ok) throw new Error('Optimization failed');
+
+                // --- FIXED: Using correct key 'transactions_in_block' ---
+                alert(`Optimization complete! Block ${result.block_id} mined with ${result.transactions_in_block} transactions.`);
+                refreshStats();
+            } catch (error) {
+                alert('Error optimizing placement: ' + error.message);
+            }
+        }
+        
+        async function refreshStats() {
+            try {
+                const response = await fetch(`${API_BASE}/stats`);
+                const stats = await response.json();
+                if (!response.ok) throw new Error('Failed to fetch stats');
+                
+                // --- FIXED: Using correct keys from the updated API ---
+                document.getElementById('pendingVMs').textContent = stats.pending_vm_requests;
+                document.getElementById('placedVMs').textContent = stats.placed_vms;
+                document.getElementById('blockchainBlocks').textContent = stats.blockchain_blocks;
+                document.getElementById('pendingTxs').textContent = stats.pending_transactions;
+                
+                // --- FIXED: Logic to handle the corrected 'node_statistics' array ---
+                const labels = stats.node_statistics.map(n => n.node_id);
+                const cpuData = stats.node_statistics.map(n => (n.cpu_utilization * 100).toFixed(1));
+                const memoryData = stats.node_statistics.map(n => (n.memory_utilization * 100).toFixed(1));
+                
+                utilizationChart.data.labels = labels;
+                utilizationChart.data.datasets[0].data = cpuData;
+                utilizationChart.data.datasets[1].data = memoryData;
+                utilizationChart.update();
+                
+            } catch (error) {
+                console.error('Error refreshing stats:', error);
+            }
+        }
+        
+        async function showBlockchain() {
+            try {
+                const response = await fetch(`${API_BASE}/blockchain`);
+                const info = await response.json();
+                if (!response.ok) throw new Error('Failed to fetch blockchain info');
+                
+                // --- FIXED: Using correct keys and handling null hash ---
+                const latestHash = info.latest_block_hash ? info.latest_block_hash.substring(0, 16) + '...' : 'N/A';
+                
+                alert(
+                    `Blockchain Info:\n` +
+                    `Blocks: ${info.blocks_in_chain}\n` +
+                    `Pending TXs: ${info.pending_transactions}\n` +
+                    `Valid: ${info.is_chain_valid}\n` +
+                    `Latest Hash: ${latestHash}`
+                );
+            } catch (error) {
+                alert('Error fetching blockchain info: ' + error.message);
+            }
+        }
+        
+        // Auto-refresh every 30 seconds
+        setInterval(refreshStats, 30000);
+        // Initial load
+        window.onload = refreshStats;
+    </script>
+</body>
+</html>
