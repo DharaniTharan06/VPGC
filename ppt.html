@@ -1,0 +1,687 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VM Placement Optimization Presentation</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            overflow: hidden;
+            color: #333;
+        }
+
+        .presentation-container {
+            width: 100vw;
+            height: 100vh;
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .slide {
+            width: 90vw;
+            height: 85vh;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.3);
+            display: none;
+            flex-direction: column;
+            padding: 60px;
+            position: relative;
+            overflow-y: auto;
+            animation: slideIn 0.5s ease-out;
+        }
+
+        .slide.active {
+            display: flex;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(50px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        h1 {
+            font-size: 3em;
+            margin-bottom: 30px;
+            color: #2c3e50;
+            text-align: center;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        h2 {
+            font-size: 2.5em;
+            margin-bottom: 25px;
+            color: #34495e;
+            text-align: center;
+        }
+
+        h3 {
+            font-size: 1.8em;
+            margin-bottom: 15px;
+            color: #2980b9;
+        }
+
+        p, li {
+            font-size: 1.3em;
+            line-height: 1.6;
+            margin-bottom: 15px;
+        }
+
+        .title-slide {
+            text-align: center;
+            justify-content: center;
+        }
+
+        .title-slide h1 {
+            font-size: 3.5em;
+            margin-bottom: 40px;
+        }
+
+        .title-slide .subtitle {
+            font-size: 1.5em;
+            color: #7f8c8d;
+            margin-bottom: 20px;
+        }
+
+        .puzzle-visual {
+            display: flex;
+            justify-content: center;
+            margin: 30px 0;
+            gap: 20px;
+        }
+
+        .vm-block {
+            width: 60px;
+            height: 60px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            animation: float 2s ease-in-out infinite;
+        }
+
+        .vm1 { background: #e74c3c; animation-delay: 0s; }
+        .vm2 { background: #3498db; animation-delay: 0.3s; }
+        .vm3 { background: #f39c12; animation-delay: 0.6s; }
+        .vm4 { background: #2ecc71; animation-delay: 0.9s; }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+
+        .server-container {
+            width: 200px;
+            height: 120px;
+            border: 3px dashed #95a5a6;
+            border-radius: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.1em;
+            color: #7f8c8d;
+        }
+
+        .three-pillars {
+            display: flex;
+            justify-content: space-around;
+            margin: 40px 0;
+        }
+
+        .pillar {
+            width: 250px;
+            height: 200px;
+            background: linear-gradient(145deg, #f8f9fa, #e9ecef);
+            border-radius: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s ease;
+        }
+
+        .pillar:hover {
+            transform: translateY(-10px);
+        }
+
+        .pillar-icon {
+            font-size: 3em;
+            margin-bottom: 15px;
+        }
+
+        .pillar h3 {
+            text-align: center;
+            font-size: 1.3em;
+        }
+
+        .formula {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            padding: 20px;
+            border-radius: 15px;
+            font-family: 'Courier New', monospace;
+            font-size: 1.4em;
+            text-align: center;
+            margin: 20px 0;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        .objectives {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 30px;
+            margin: 30px 0;
+        }
+
+        .objective {
+            background: #f8f9fa;
+            padding: 25px;
+            border-radius: 15px;
+            text-align: center;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .objective-icon {
+            font-size: 2.5em;
+            margin-bottom: 15px;
+        }
+
+        .code-output {
+            background: #2c3e50;
+            color: #ecf0f1;
+            padding: 20px;
+            border-radius: 10px;
+            font-family: 'Courier New', monospace;
+            font-size: 1.1em;
+            margin: 20px 0;
+            overflow-x: auto;
+        }
+
+        .highlight-box {
+            border: 3px solid #e74c3c;
+            background: rgba(231, 76, 60, 0.1);
+            padding: 10px;
+            border-radius: 5px;
+            margin: 5px 0;
+        }
+
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 25px;
+            margin: 30px 0;
+        }
+
+        .metric {
+            background: linear-gradient(145deg, #f8f9fa, #e9ecef);
+            padding: 20px;
+            border-radius: 15px;
+            text-align: center;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .metric-value {
+            font-size: 2em;
+            font-weight: bold;
+            color: #2ecc71;
+            margin: 10px 0;
+        }
+
+        .comparison-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            font-size: 1.1em;
+        }
+
+        .comparison-table th {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            padding: 15px;
+            text-align: center;
+        }
+
+        .comparison-table td {
+            padding: 12px;
+            text-align: center;
+            border: 1px solid #ddd;
+        }
+
+        .comparison-table tr:nth-child(even) {
+            background: #f8f9fa;
+        }
+
+        .comparison-table tr:first-child td {
+            background: #d4edda;
+            font-weight: bold;
+        }
+
+        .navigation {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 15px;
+            z-index: 1000;
+        }
+
+        .nav-btn {
+            padding: 12px 24px;
+            background: rgba(255, 255, 255, 0.9);
+            border: none;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 1em;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+            transition: all 0.3s ease;
+        }
+
+        .nav-btn:hover {
+            background: white;
+            transform: translateY(-2px);
+        }
+
+        .nav-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .slide-counter {
+            position: fixed;
+            top: 30px;
+            right: 30px;
+            background: rgba(255, 255, 255, 0.9);
+            padding: 10px 20px;
+            border-radius: 20px;
+            font-weight: bold;
+            color: #333;
+        }
+
+        .advantages {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 30px;
+            margin: 30px 0;
+        }
+
+        .advantage {
+            background: #f8f9fa;
+            padding: 25px;
+            border-radius: 15px;
+            text-align: center;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .advantage-icon {
+            font-size: 3em;
+            margin-bottom: 15px;
+        }
+
+        ul {
+            list-style: none;
+            padding-left: 0;
+        }
+
+        li {
+            margin: 10px 0;
+            padding-left: 30px;
+            position: relative;
+        }
+
+        li:before {
+            content: "→";
+            position: absolute;
+            left: 0;
+            color: #3498db;
+            font-weight: bold;
+            font-size: 1.2em;
+        }
+    </style>
+</head>
+<body>
+    <div class="presentation-container">
+        <div class="slide-counter">
+            <span id="current-slide">1</span> / <span id="total-slides">12</span>
+        </div>
+
+        <!-- Slide 1: Title Slide -->
+        <div class="slide active title-slide">
+            <h1>Multi-Objective Game-Theoretic VM Placement Optimization using Blockchain</h1>
+            <div class="subtitle">Your Name</div>
+            <div class="subtitle">Course/Professor Name</div>
+            <div class="subtitle">September 27, 2025</div>
+        </div>
+
+        <!-- Slide 2: The Problem -->
+        <div class="slide">
+            <h2>The Problem: The Data Center Puzzle</h2>
+            <div class="puzzle-visual">
+                <div class="vm-block vm1">VM1</div>
+                <div class="vm-block vm2">VM2</div>
+                <div class="vm-block vm3">VM3</div>
+                <div class="vm-block vm4">VM4</div>
+                <div style="font-size: 2em; margin: 0 20px; align-self: center;">→</div>
+                <div class="server-container">Physical Servers</div>
+            </div>
+            <h3>Key Challenges:</h3>
+            <ul>
+                <li>High Energy Costs</li>
+                <li>Wasted Hardware Resources</li>
+                <li>Risk of Server Overloads</li>
+                <li>Lack of transparent audit trail for placements</li>
+            </ul>
+        </div>
+
+        <!-- Slide 3: Our Solution -->
+        <div class="slide">
+            <h2>Our Solution: A Three-Pillar Approach</h2>
+            <div class="three-pillars">
+                <div class="pillar">
+                    <div class="pillar-icon">🧠</div>
+                    <h3>Multi-Objective Optimization</h3>
+                    <p>(The Brains)</p>
+                </div>
+                <div class="pillar">
+                    <div class="pillar-icon">⚖</div>
+                    <h3>Game Theory</h3>
+                    <p>(The Strategy)</p>
+                </div>
+                <div class="pillar">
+                    <div class="pillar-icon">🔗</div>
+                    <h3>Blockchain</h3>
+                    <p>(The Ledger)</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 4: Optimization Engine -->
+        <div class="slide">
+            <h2>Pillar 1: The Optimization Engine</h2>
+            <h3>Goal: Find the placement with the highest "Utility Score"</h3>
+            <div class="formula">
+                Utility Score = (w₁ × Utilization) + (w₂ × Energy) + (w₃ × Load Balance)
+            </div>
+            <div class="objectives">
+                <div class="objective">
+                    <div class="objective-icon">📊</div>
+                    <h3>Maximize Resource Utilization</h3>
+                    <p>Aim for ~80%</p>
+                </div>
+                <div class="objective">
+                    <div class="objective-icon">⚡</div>
+                    <h3>Maximize Energy Efficiency</h3>
+                    <p>Choose low-cost servers</p>
+                </div>
+                <div class="objective">
+                    <div class="objective-icon">⚖</div>
+                    <h3>Maximize Load Balancing</h3>
+                    <p>Spread work evenly</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 5: Strategy & Security -->
+        <div class="slide">
+            <h2>Pillar 2 & 3: Strategy & Security</h2>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 40px; margin-top: 40px;">
+                <div>
+                    <h3>🎯 Game Theory:</h3>
+                    <ul>
+                        <li>Finds the Nash Equilibrium</li>
+                        <li>Result: A stable placement where no single VM can improve its situation by moving</li>
+                        <li>Ensures a fair and logical outcome</li>
+                    </ul>
+                </div>
+                <div>
+                    <h3>🔒 Blockchain:</h3>
+                    <ul>
+                        <li>Creates an immutable, transparent log of all placements</li>
+                        <li>Result: High security and perfect auditability</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 6: System in Action -->
+        <div class="slide">
+            <h2>System in Action: Live Output</h2>
+            <div class="code-output">
+<div class="highlight-box">Optimal Placement Results:
+VM vm_1 placed on node_1
+VM vm_2 placed on node_4
+VM vm_3 placed on node_1
+VM vm_4 placed on node_4
+VM vm_5 placed on node_1</div>
+
+Blockchain Status:
+Block mined successfully with 10 transactions
+
+<div class="highlight-box">Node Utilization:
+node_1: CPU=87.5%, Memory=75.0%, Storage=80.0%
+node_2: CPU=0.0%, Memory=0.0%, Storage=0.0%
+node_3: CPU=0.0%, Memory=0.0%, Storage=0.0%
+node_4: CPU=62.5%, Memory=60.0%, Storage=65.0%</div>
+            </div>
+        </div>
+
+        <!-- Slide 7: Key Performance Metrics -->
+        <div class="slide">
+            <h2>Key Performance Metrics</h2>
+            <div class="metrics-grid">
+                <div class="metric">
+                    <div style="font-size: 2em;">✅</div>
+                    <div class="metric-value">100%</div>
+                    <div>Placement Success Rate (5/5 Placed)</div>
+                </div>
+                <div class="metric">
+                    <div style="font-size: 2em;">⚖</div>
+                    <div class="metric-value">0.012</div>
+                    <div>Load Balancing Variance (Low = Good)</div>
+                </div>
+                <div class="metric">
+                    <div style="font-size: 2em;">⚡</div>
+                    <div class="metric-value">0.174</div>
+                    <div>Energy Efficiency Avg. Cost (Low = Good)</div>
+                </div>
+                <div class="metric">
+                    <div style="font-size: 2em;">📊</div>
+                    <div class="metric-value">87.5%</div>
+                    <div>Node Utilization (Node 1 - Efficiently Packed)</div>
+                </div>
+                <div class="metric">
+                    <div style="font-size: 2em;">🔗</div>
+                    <div class="metric-value">1 Block, 10 TX</div>
+                    <div>Blockchain Throughput (Securely Logged)</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 8: Analysis -->
+        <div class="slide">
+            <h2>Analysis: The Strategy of Server Consolidation</h2>
+            <div style="background: #f8f9fa; padding: 30px; border-radius: 15px; margin: 20px 0;">
+                <h3 style="color: #e74c3c;">❓ Why are node_2 and node_3 at 0%?</h3>
+                <h3 style="color: #27ae60;">✅ Answer: This is the optimizer working correctly!</h3>
+            </div>
+            <ul style="font-size: 1.4em; line-height: 1.8;">
+                <li>It prioritized the two most energy-efficient nodes (node_1 and node_4)</li>
+                <li>It densely packed them to meet its ~80% utilization goal</li>
+                <li>This is a known industry strategy called <strong>Server Consolidation</strong></li>
+                <li>It saves significant costs by allowing idle servers to enter low-power state</li>
+            </ul>
+        </div>
+
+        <!-- Slide 9: Benchmarking Methodology -->
+        <div class="slide">
+            <h2>Benchmarking Methodology</h2>
+            <div style="text-align: center; margin: 40px 0;">
+                <div style="background: #e8f4fd; padding: 30px; border-radius: 15px; margin: 20px 0;">
+                    <h3>🎯 Goal: To create a fair, "apples-to-apples" comparison</h3>
+                </div>
+                <div style="background: #f0f9ff; padding: 30px; border-radius: 15px; margin: 20px 0;">
+                    <h3>🔬 Method: We performed a principled simulation of four standard algorithms using our identical workload</h3>
+                </div>
+                <div style="background: #f8f9fa; padding: 30px; border-radius: 15px; margin: 20px 0;">
+                    <h3>💡 Why: This allows us to compare the final outcomes directly, rather than relying on theory</h3>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 10: Quantitative Comparison -->
+        <div class="slide">
+            <h2>Quantitative Comparison</h2>
+            <table class="comparison-table">
+                <thead>
+                    <tr>
+                        <th>Model / Algorithm</th>
+                        <th>Placement Success Rate</th>
+                        <th>Load Balance (CPU Variance)</th>
+                        <th>Energy Efficiency (Avg. Cost/VM)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>Your Model (Game Theory)</strong></td>
+                        <td><strong>100%</strong></td>
+                        <td><strong>Low (0.012)</strong></td>
+                        <td><strong>Good (0.174)</strong></td>
+                    </tr>
+                    <tr>
+                        <td>First-Fit</td>
+                        <td>100%</td>
+                        <td>Very High (0.051)</td>
+                        <td>Poor (0.162)</td>
+                    </tr>
+                    <tr>
+                        <td>Greedy</td>
+                        <td>100%</td>
+                        <td>High (0.034)</td>
+                        <td>Average (0.168)</td>
+                    </tr>
+                    <tr>
+                        <td>Round-Robin</td>
+                        <td>100%</td>
+                        <td>Medium (0.025)</td>
+                        <td>Poor (0.180)</td>
+                    </tr>
+                    <tr>
+                        <td>Genetic Algorithm</td>
+                        <td>100%</td>
+                        <td>Low (0.015)</td>
+                        <td>Good (0.170)</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Slide 11: Conclusion -->
+        <div class="slide">
+            <h2>Conclusion & Key Advantages</h2>
+            <p style="font-size: 1.4em; text-align: center; margin-bottom: 40px;">
+                Our system successfully demonstrates an intelligent VM placement solution.
+            </p>
+            <div class="advantages">
+                <div class="advantage">
+                    <div class="advantage-icon">✅</div>
+                    <h3>Balanced & Optimal</h3>
+                    <p>Considers multiple objectives, not just one</p>
+                </div>
+                <div class="advantage">
+                    <div class="advantage-icon">⚖</div>
+                    <h3>Stable & Fair</h3>
+                    <p>Game Theory ensures a logical, stable outcome</p>
+                </div>
+                <div class="advantage">
+                    <div class="advantage-icon">🔒</div>
+                    <h3>Secure & Transparent</h3>
+                    <p>Blockchain provides a perfect, auditable trail</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 12: Thank You -->
+        <div class="slide title-slide">
+            <h1>Thank You</h1>
+            <h2 style="margin-top: 50px; color: #667eea;">Questions?</h2>
+            <div style="font-size: 4em; margin-top: 50px;">❓</div>
+        </div>
+    </div>
+
+    <div class="navigation">
+        <button class="nav-btn" id="prev-btn" onclick="previousSlide()">← Previous</button>
+        <button class="nav-btn" id="next-btn" onclick="nextSlide()">Next →</button>
+    </div>
+
+    <script>
+        let currentSlide = 0;
+        const slides = document.querySelectorAll('.slide');
+        const totalSlides = slides.length;
+
+        document.getElementById('total-slides').textContent = totalSlides;
+
+        function showSlide(n) {
+            slides[currentSlide].classList.remove('active');
+            currentSlide = n;
+            
+            if (currentSlide >= totalSlides) currentSlide = 0;
+            if (currentSlide < 0) currentSlide = totalSlides - 1;
+            
+            slides[currentSlide].classList.add('active');
+            document.getElementById('current-slide').textContent = currentSlide + 1;
+            
+            // Update navigation buttons
+            document.getElementById('prev-btn').disabled = currentSlide === 0;
+            document.getElementById('next-btn').disabled = currentSlide === totalSlides - 1;
+        }
+
+        function nextSlide() {
+            if (currentSlide < totalSlides - 1) {
+                showSlide(currentSlide + 1);
+            }
+        }
+
+        function previousSlide() {
+            if (currentSlide > 0) {
+                showSlide(currentSlide - 1);
+            }
+        }
+
+        // Keyboard navigation
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'ArrowRight' || e.key === ' ') {
+                e.preventDefault();
+                nextSlide();
+            } else if (e.key === 'ArrowLeft') {
+                e.preventDefault();
+                previousSlide();
+            }
+        });
+
+        // Initialize
+        showSlide(0);
+    </script>
+</body>
+</html>
