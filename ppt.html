@@ -366,16 +366,11 @@
         <div class="slide-counter">
             <span id="current-slide">1</span> / <span id="total-slides">12</span>
         </div>
-
-        <!-- Slide 1: Title Slide -->
         <div class="slide active title-slide">
             <h1>Multi-Objective Game-Theoretic VM Placement Optimization using Blockchain</h1>
-            <div class="subtitle">Your Name</div>
-            <div class="subtitle">Course/Professor Name</div>
             <div class="subtitle">September 27, 2025</div>
         </div>
 
-        <!-- Slide 2: The Problem -->
         <div class="slide">
             <h2>The Problem: The Data Center Puzzle</h2>
             <div class="puzzle-visual">
@@ -395,7 +390,6 @@
             </ul>
         </div>
 
-        <!-- Slide 3: Our Solution -->
         <div class="slide">
             <h2>Our Solution: A Three-Pillar Approach</h2>
             <div class="three-pillars">
@@ -417,7 +411,6 @@
             </div>
         </div>
 
-        <!-- Slide 4: Optimization Engine -->
         <div class="slide">
             <h2>Pillar 1: The Optimization Engine</h2>
             <h3>Goal: Find the placement with the highest "Utility Score"</h3>
@@ -443,7 +436,6 @@
             </div>
         </div>
 
-        <!-- Slide 5: Strategy & Security -->
         <div class="slide">
             <h2>Pillar 2 & 3: Strategy & Security</h2>
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 40px; margin-top: 40px;">
@@ -465,7 +457,6 @@
             </div>
         </div>
 
-        <!-- Slide 6: System in Action -->
         <div class="slide">
             <h2>System in Action: Live Output</h2>
             <div class="code-output">
@@ -487,7 +478,6 @@ node_4: CPU=62.5%, Memory=60.0%, Storage=65.0%</div>
             </div>
         </div>
 
-        <!-- Slide 7: Key Performance Metrics -->
         <div class="slide">
             <h2>Key Performance Metrics</h2>
             <div class="metrics-grid">
@@ -519,7 +509,6 @@ node_4: CPU=62.5%, Memory=60.0%, Storage=65.0%</div>
             </div>
         </div>
 
-        <!-- Slide 8: Analysis -->
         <div class="slide">
             <h2>Analysis: The Strategy of Server Consolidation</h2>
             <div style="background: #f8f9fa; padding: 30px; border-radius: 15px; margin: 20px 0;">
@@ -534,7 +523,6 @@ node_4: CPU=62.5%, Memory=60.0%, Storage=65.0%</div>
             </ul>
         </div>
 
-        <!-- Slide 9: Benchmarking Methodology -->
         <div class="slide">
             <h2>Benchmarking Methodology</h2>
             <div style="text-align: center; margin: 40px 0;">
@@ -550,7 +538,6 @@ node_4: CPU=62.5%, Memory=60.0%, Storage=65.0%</div>
             </div>
         </div>
 
-        <!-- Slide 10: Quantitative Comparison -->
         <div class="slide">
             <h2>Quantitative Comparison</h2>
             <table class="comparison-table">
@@ -597,7 +584,6 @@ node_4: CPU=62.5%, Memory=60.0%, Storage=65.0%</div>
             </table>
         </div>
 
-        <!-- Slide 11: Conclusion -->
         <div class="slide">
             <h2>Conclusion & Key Advantages</h2>
             <p style="font-size: 1.4em; text-align: center; margin-bottom: 40px;">
@@ -622,12 +608,6 @@ node_4: CPU=62.5%, Memory=60.0%, Storage=65.0%</div>
             </div>
         </div>
 
-        <!-- Slide 12: Thank You -->
-        <div class="slide title-slide">
-            <h1>Thank You</h1>
-            <h2 style="margin-top: 50px; color: #667eea;">Questions?</h2>
-            <div style="font-size: 4em; margin-top: 50px;">❓</div>
-        </div>
     </div>
 
     <div class="navigation">
@@ -652,7 +632,6 @@ node_4: CPU=62.5%, Memory=60.0%, Storage=65.0%</div>
             slides[currentSlide].classList.add('active');
             document.getElementById('current-slide').textContent = currentSlide + 1;
             
-            // Update navigation buttons
             document.getElementById('prev-btn').disabled = currentSlide === 0;
             document.getElementById('next-btn').disabled = currentSlide === totalSlides - 1;
         }
@@ -669,7 +648,6 @@ node_4: CPU=62.5%, Memory=60.0%, Storage=65.0%</div>
             }
         }
 
-        // Keyboard navigation
         document.addEventListener('keydown', function(e) {
             if (e.key === 'ArrowRight' || e.key === ' ') {
                 e.preventDefault();
@@ -680,7 +658,6 @@ node_4: CPU=62.5%, Memory=60.0%, Storage=65.0%</div>
             }
         });
 
-        // Initialize
         showSlide(0);
     </script>
 </body>
