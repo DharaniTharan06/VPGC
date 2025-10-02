@@ -6,57 +6,98 @@
     <title>VM Placement Dashboard</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
     <style>
+        :root {
+            --backgroundTeal: #FFFFFF;
+            --darkTeal: #00695C;
+            --primaryText: #212121;
+            --secondaryText: #9E9E9E;
+            --cardWhite: #E0F2F1; 
+            --lightTeal: #80CBC4;
+            --mediumTeal: #26A69A;
+            --borderGrey: #BDBDBD;
+        }
+
         body {
-            font-family: Arial, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--backgroundTeal);
+            color: var(--primaryText);
             margin: 0;
             padding: 20px;
         }
+
+        h1, h3 {
+            color: var(--darkTeal);
+            font-weight: 600;
+        }
+
         .dashboard {
             display: grid;
             grid-template-columns: 1fr 1fr;
             gap: 20px;
-            max-width: 1200px;
+            max-width: 1400px;
             margin: 0 auto;
         }
+
         .card {
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 15px;
-            padding: 20px;
-            border: 1px solid rgba(255, 255, 255, 0.2);
+            background-color: var(--cardWhite);
+            border-radius: 16px;
+            padding: 25px;
+            border: 1px solid var(--borderGrey);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
         }
+        
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+        }
+
+        .full-width {
+            grid-column: 1 / -1;
+        }
+
         button {
-            background: linear-gradient(45deg, #ff6b6b, #ff8e53);
+            background: linear-gradient(45deg, var(--darkTeal), var(--mediumTeal));
             color: white;
             border: none;
-            padding: 10px 20px;
+            padding: 12px 24px;
             border-radius: 25px;
             cursor: pointer;
             margin: 5px;
+            font-weight: bold;
+            transition: transform 0.2s, box-shadow 0.2s;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
         }
+
         button:hover {
             transform: scale(1.05);
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
         }
+
         .stats {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 10px;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
             margin-top: 20px;
         }
+
         .stat-item {
-            background: rgba(255, 255, 255, 0.1);
+            background: var(--lightTeal);
+            color: var(--primaryText);
             padding: 15px;
             border-radius: 10px;
             text-align: center;
         }
-        input {
-            width: calc(100% - 20px);
-            padding: 8px 10px;
-            border-radius: 5px;
-            border: 1px solid rgba(255, 255, 255, 0.3);
-            background: rgba(255, 255, 255, 0.2);
-            color: white;
+        
+        .stat-item h4 {
+            margin: 0 0 5px 0;
+            font-size: 0.9em;
+            color: var(--darkTeal);
+        }
+
+        .stat-item span {
+            font-size: 1.5em;
+            font-weight: bold;
         }
     </style>
 </head>
@@ -64,132 +105,114 @@
     <h1 style="text-align: center; margin-bottom: 30px;">VM Placement Optimization Dashboard</h1>
     
     <div class="dashboard">
-        <div class="card">
-            <h3>VM Request</h3>
-            <form id="vmForm">
-                <input type="text" id="vmId" placeholder="VM ID" required><br><br>
-                <input type="number" id="cpu" placeholder="CPU Cores" step="0.1" required><br><br>
-                <input type="number" id="memory" placeholder="Memory (GB)" step="0.1" required><br><br>
-                <input type="number" id="storage" placeholder="Storage (GB)" required><br><br>
-                <input type="number" id="network" placeholder="Network (Gbps)" step="0.1" required><br><br>
-                <input type="number" id="priority" placeholder="Priority (1-5)" min="1" max="5" required><br><br>
-                <input type="text" id="owner" placeholder="Owner" required><br><br>
-                <button type="submit">Request VM</button>
-            </form>
-        </div>
-        
+
         <div class="card">
             <h3>System Control</h3>
-            <button onclick="optimizePlacement()">Optimize & Mine Block</button>
+            <button onclick="optimizePlacement()">Run Optimization</button>
             <button onclick="refreshStats()">Refresh Stats</button>
-            <button onclick="showBlockchain()">Blockchain Info</button>
         </div>
-        
-        <div class="card" style="grid-column: 1 / -1;">
+        <div class="card">
+            <h3>Live Performance Metrics</h3>
+            <canvas id="performanceRadarChart" height="150"></canvas>
+        </div>
+        <div class="card full-width">
+            <h3>Algorithm Comparison</h3>
+            <canvas id="comparisonChart" height="100"></canvas>
+        </div>
+    
+        <div class="card">
             <h3>Node Utilization</h3>
-            <canvas id="utilizationChart" width="400" height="150"></canvas>
+            <canvas id="utilizationChart" height="150"></canvas>
         </div>
-        
-        <div class="card" style="grid-column: 1 / -1;">
-            <h3>System Statistics</h3>
-            <div id="stats" class="stats">
-                <div class="stat-item">
-                    <h4>Pending VMs</h4>
-                    <span id="pendingVMs">0</span>
-                </div>
-                <div class="stat-item">
-                    <h4>Placed VMs</h4>
-                    <span id="placedVMs">0</span>
-                </div>
-                <div class="stat-item">
-                    <h4>Blockchain Blocks</h4>
-                    <span id="blockchainBlocks">0</span>
-                </div>
-                <div class="stat-item">
-                    <h4>Pending TXs</h4>
-                    <span id="pendingTxs">0</span>
-                </div>
+        <div class="card">
+            <h3>Blockchain Status</h3>
+            <div id="blockchain-status" class="stats">
+    
             </div>
         </div>
     </div>
 
     <script>
-        const API_BASE = 'http://127.0.0.1:5000/api';
+        const API_BASE = 'http://localhost:5000/api';
         
-        // Initialize chart
-        const ctx = document.getElementById('utilizationChart').getContext('2d');
-        const utilizationChart = new Chart(ctx, {
-            type: 'bar',
-            data: {
-                labels: [],
-                datasets: [{
-                    label: 'CPU Utilization %',
-                    data: [],
-                    backgroundColor: 'rgba(255, 107, 107, 0.8)',
-                }, {
-                    label: 'Memory Utilization %',
-                    data: [],
-                    backgroundColor: 'rgba(78, 205, 196, 0.8)',
-                }]
-            },
-            options: {
-                responsive: true,
-                scales: {
-                    y: {
-                        beginAtZero: true,
-                        max: 100,
-                        ticks: { color: 'white' }
+        let utilizationChart, comparisonChart, performanceRadarChart;
+
+        Chart.defaults.color = 'var(--primaryText)';
+        Chart.defaults.borderColor = 'rgba(0, 105, 92, 0.1)'; 
+        Chart.defaults.font.family = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif';
+
+        function initializeCharts() {
+          
+            const utilCtx = document.getElementById('utilizationChart').getContext('2d');
+            utilizationChart = new Chart(utilCtx, {
+                type: 'bar',
+                data: { labels: [], datasets: [
+                    { label: 'CPU Utilization %', data: [], backgroundColor: 'var(--mediumTeal)' },
+                    { label: 'Memory Utilization %', data: [], backgroundColor: 'var(--lightTeal)' }
+                ]},
+                options: { responsive: true, scales: { y: { beginAtZero: true, max: 100 } } }
+            });
+
+            const comparisonCtx = document.getElementById('comparisonChart').getContext('2d');
+            comparisonChart = new Chart(comparisonCtx, {
+                type: 'bar', data: { labels: [], datasets: [] },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        title: { display: true, text: 'Model Performance vs. Standard Algorithms', font: { size: 16 } },
+                        tooltip: { 
+                            backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                            callbacks: {
+                                label: function(context) {
+                                    let label = context.dataset.label || '';
+                                    if (label) { label += ': '; }
+                                    if (context.parsed.y !== null) {
+                                        let explanation = ' (Lower is Better)';
+                                        if(context.label.includes('SLA')) explanation = ' (Higher % is Worse)';
+                                        label += context.parsed.y + explanation;
+                                    }
+                                    return label;
+                                }
+                            }
+                        }
                     },
-                    x: {
-                        ticks: { color: 'white' }
-                    }
+                    scales: { y: { beginAtZero: true, title: { display: true, text: 'Metric Value' } } }
+                }
+            });
+            const radarCtx = document.getElementById('performanceRadarChart').getContext('2d');
+            performanceRadarChart = new Chart(radarCtx, {
+                type: 'radar',
+                data: {
+                    labels: ['Success Rate', 'Avg CPU Util', 'Avg Mem Util', 'Load Balance', 'Tx Throughput'],
+                    datasets: [{
+                        label: 'Your Model Performance (Normalized)',
+                        data: [0, 0, 0, 0, 0],
+                        fill: true,
+                        backgroundColor: 'rgba(0, 105, 92, 0.2)',
+                        borderColor: 'var(--darkTeal)',
+                        pointBackgroundColor: 'var(--darkTeal)',
+                    }]
                 },
-                plugins: {
-                    legend: {
-                        labels: { color: 'white' }
+                options: {
+                    responsive: true,
+                    scales: { 
+                        r: { 
+                            angleLines: { display: true }, 
+                            suggestedMin: 0, 
+                            suggestedMax: 1, 
+                            ticks: { display: false },
+                            pointLabels: { font: { size: 14 } } 
+                        } 
                     }
                 }
-            }
-        });
-
-        document.getElementById('vmForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const formData = {
-                vm_id: document.getElementById('vmId').value,
-                cpu: parseFloat(document.getElementById('cpu').value),
-                memory: parseFloat(document.getElementById('memory').value),
-                storage: parseInt(document.getElementById('storage').value),
-                network: parseFloat(document.getElementById('network').value),
-                priority: parseInt(document.getElementById('priority').value),
-                owner: document.getElementById('owner').value
-            };
-            
-            try {
-                const response = await fetch(`${API_BASE}/vm/request`, {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify(formData)
-                });
-                
-                const result = await response.json();
-                if (!response.ok) {
-                    throw new Error(result.error || 'Request failed');
-                }
-
-                alert(`VM ${result.vm_id} request submitted!`);
-                document.getElementById('vmForm').reset();
-                refreshStats();
-            } catch (error) {
-                alert('Error submitting VM request: ' + error.message);
-            }
-        });
+            });
+        }
         
         async function optimizePlacement() {
             try {
-                const response = await fetch(`${API_BASE}/optimize`, {method: 'POST'});
+                const response = await fetch(${API_BASE}/optimize, {method: 'POST'});
                 const result = await response.json();
-                if (!response.ok) throw new Error('Optimization failed');
-                alert(`Optimization complete! Block ${result.block_id} mined with ${result.transactions_in_block} transactions.`);
+                alert(Optimization complete! Block ${result.block_id} mined with ${result.transactions} transactions.);
                 refreshStats();
             } catch (error) {
                 alert('Error optimizing placement: ' + error.message);
@@ -198,50 +221,69 @@
         
         async function refreshStats() {
             try {
-                const response = await fetch(`${API_BASE}/stats`);
+                const response = await fetch(${API_BASE}/stats);
                 const stats = await response.json();
-                if (!response.ok) throw new Error('Failed to fetch stats');
-
-                document.getElementById('pendingVMs').textContent = stats.pending_vm_requests;
-                document.getElementById('placedVMs').textContent = stats.placed_vms;
-                document.getElementById('blockchainBlocks').textContent = stats.blockchain_blocks;
-                document.getElementById('pendingTxs').textContent = stats.pending_transactions;
-                const labels = stats.node_statistics.map(n => n.node_id);
+                
+                const utilLabels = stats.node_statistics.map(n => n.node_id);
                 const cpuData = stats.node_statistics.map(n => (n.cpu_utilization * 100).toFixed(1));
                 const memoryData = stats.node_statistics.map(n => (n.memory_utilization * 100).toFixed(1));
-                
-                utilizationChart.data.labels = labels;
+                utilizationChart.data.labels = utilLabels;
                 utilizationChart.data.datasets[0].data = cpuData;
                 utilizationChart.data.datasets[1].data = memoryData;
                 utilizationChart.update();
                 
+                if (stats.comparison_data) {
+                    const themeColors = ['#00695C', '#26A69A', '#80CBC4', '#B3E5E2'];
+                    stats.comparison_data.datasets.forEach((dataset, index) => {
+                        dataset.backgroundColor = themeColors[index % themeColors.length];
+                    });
+                    comparisonChart.data.labels = stats.comparison_data.labels;
+                    comparisonChart.data.datasets = stats.comparison_data.datasets;
+                    comparisonChart.update();
+                }
+                if (stats.performance_metrics) {
+                    const metrics = stats.performance_metrics;
+              
+                    const successRate = metrics.success_rate;
+
+                    const activeCpuNodes = cpuData.filter(d => d > 0);
+                    const avgCpuUtil = activeCpuNodes.length > 0 ? (activeCpuNodes.map(Number).reduce((a, b) => a + b, 0) / activeCpuNodes.length) / 100 : 0;
+                    
+                    const activeMemNodes = memoryData.filter(d => d > 0);
+                    const avgMemUtil = activeMemNodes.length > 0 ? (activeMemNodes.map(Number).reduce((a, b) => a + b, 0) / activeMemNodes.length) / 100 : 0;
+
+                    const loadBalanceScore = 1 - (Math.min(metrics.load_balance_variance, 0.1) / 0.1); 
+                    
+                    const txThroughput = stats.blockchain_blocks > 1 ? 1 : 0;
+
+                    performanceRadarChart.data.datasets[0].data = [
+                        successRate.toFixed(2),
+                        avgCpuUtil.toFixed(2),
+                        avgMemUtil.toFixed(2),
+                        loadBalanceScore.toFixed(2),
+                        txThroughput.toFixed(2)
+                    ];
+                    performanceRadarChart.update();
+                }
+
+                const blockchainInfo = await (await fetch(${API_A_BASE}/blockchain)).json();
+                document.getElementById('blockchain-status').innerHTML = `
+                    <div class="stat-item"><h4>Blocks</h4><span>${blockchainInfo.blocks}</span></div>
+                    <div class="stat-item"><h4>Pending TXs</h4><span>${blockchainInfo.pending_transactions}</span></div>
+                    <div class="stat-item"><h4>Integrity</h4><span style="color: ${blockchainInfo.is_valid ? 'var(--darkTeal)' : '#F44336'}; font-weight: bold;">
+                        ${blockchainInfo.is_valid ? 'VALID' : 'INVALID'}
+                    </span></div>`;
+
             } catch (error) {
                 console.error('Error refreshing stats:', error);
             }
         }
         
-        async function showBlockchain() {
-            try {
-                const response = await fetch(`${API_BASE}/blockchain`);
-                const info = await response.json();
-                if (!response.ok) throw new Error('Failed to fetch blockchain info');
-
-                const latestHash = info.latest_block_hash ? info.latest_block_hash.substring(0, 16) + '...' : 'N/A';
-                
-                alert(
-                    `Blockchain Info:\n` +
-                    `Blocks: ${info.blocks_in_chain}\n` +
-                    `Pending TXs: ${info.pending_transactions}\n` +
-                    `Valid: ${info.is_chain_valid}\n` +
-                    `Latest Hash: ${latestHash}`
-                );
-            } catch (error) {
-                alert('Error fetching blockchain info: ' + error.message);
-            }
-        }
-        
-        setInterval(refreshStats, 30000);
-        window.onload = refreshStats;
+        window.onload = () => {
+            initializeCharts();
+            refreshStats();
+            setInterval(refreshStats, 30000);
+        };
     </script>
 </body>
 </html>
