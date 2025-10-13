@@ -88,7 +88,7 @@ def get_stats():
         'labels': ['Load Balance (Variance)', 'Energy Cost (Avg)', 'SLA Violations (Est. %)'],
         'datasets': [
             {
-                'label': 'Your Model (Game Theory)',
+                'label': 'Game Theory Model',
                 'data': [round(load_balance_variance, 4), round(avg_energy_cost, 4), 1.5],
                 'backgroundColor': 'rgba(75, 192, 192, 0.7)'
             },
