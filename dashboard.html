@@ -74,6 +74,12 @@
             box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
         }
 
+        button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
         .stats {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
@@ -99,22 +105,43 @@
             font-size: 1.5em;
             font-weight: bold;
         }
+
+        .error-message {
+            background-color: #ffebee;
+            color: #c62828;
+            padding: 10px;
+            border-radius: 8px;
+            margin-top: 10px;
+            display: none;
+        }
+
+        .success-message {
+            background-color: #e8f5e9;
+            color: #2e7d32;
+            padding: 10px;
+            border-radius: 8px;
+            margin-top: 10px;
+            display: none;
+        }
     </style>
 </head>
 <body>
     <h1 style="text-align: center; margin-bottom: 30px;">VM Placement Optimization Dashboard</h1>
     
     <div class="dashboard">
-
         <div class="card">
             <h3>System Control</h3>
-            <button onclick="optimizePlacement()">Run Optimization</button>
-            <button onclick="refreshStats()">Refresh Stats</button>
+            <button onclick="optimizePlacement()" id="optimizeBtn">Run Optimization</button>
+            <button onclick="refreshStats()" id="refreshBtn">Refresh Stats</button>
+            <div class="success-message" id="successMsg"></div>
+            <div class="error-message" id="errorMsg"></div>
         </div>
+        
         <div class="card">
             <h3>Live Performance Metrics</h3>
             <canvas id="performanceRadarChart" height="150"></canvas>
         </div>
+        
         <div class="card full-width">
             <h3>Algorithm Comparison</h3>
             <canvas id="comparisonChart" height="100"></canvas>
@@ -124,10 +151,11 @@
             <h3>Node Utilization</h3>
             <canvas id="utilizationChart" height="150"></canvas>
         </div>
+        
         <div class="card">
             <h3>Blockchain Status</h3>
             <div id="blockchain-status" class="stats">
-    
+                <div class="stat-item"><h4>Loading...</h4><span>...</span></div>
             </div>
         </div>
     </div>
@@ -137,29 +165,55 @@
         
         let utilizationChart, comparisonChart, performanceRadarChart;
 
-        Chart.defaults.color = 'var(--primaryText)';
+        Chart.defaults.color = '#212121';
         Chart.defaults.borderColor = 'rgba(0, 105, 92, 0.1)'; 
         Chart.defaults.font.family = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif';
 
+        function showError(message) {
+            const errorMsg = document.getElementById('errorMsg');
+            errorMsg.textContent = message;
+            errorMsg.style.display = 'block';
+            setTimeout(() => { errorMsg.style.display = 'none'; }, 5000);
+        }
+
+        function showSuccess(message) {
+            const successMsg = document.getElementById('successMsg');
+            successMsg.textContent = message;
+            successMsg.style.display = 'block';
+            setTimeout(() => { successMsg.style.display = 'none'; }, 5000);
+        }
+
         function initializeCharts() {
-          
             const utilCtx = document.getElementById('utilizationChart').getContext('2d');
             utilizationChart = new Chart(utilCtx, {
                 type: 'bar',
-                data: { labels: [], datasets: [
-                    { label: 'CPU Utilization %', data: [], backgroundColor: 'var(--mediumTeal)' },
-                    { label: 'Memory Utilization %', data: [], backgroundColor: 'var(--lightTeal)' }
-                ]},
-                options: { responsive: true, scales: { y: { beginAtZero: true, max: 100 } } }
+                data: { 
+                    labels: [], 
+                    datasets: [
+                        { label: 'CPU Utilization %', data: [], backgroundColor: '#26A69A' },
+                        { label: 'Memory Utilization %', data: [], backgroundColor: '#80CBC4' }
+                    ]
+                },
+                options: { 
+                    responsive: true, 
+                    scales: { 
+                        y: { beginAtZero: true, max: 100 } 
+                    } 
+                }
             });
 
             const comparisonCtx = document.getElementById('comparisonChart').getContext('2d');
             comparisonChart = new Chart(comparisonCtx, {
-                type: 'bar', data: { labels: [], datasets: [] },
+                type: 'bar', 
+                data: { labels: [], datasets: [] },
                 options: {
                     responsive: true,
                     plugins: {
-                        title: { display: true, text: 'Model Performance vs. Standard Algorithms', font: { size: 16 } },
+                        title: { 
+                            display: true, 
+                            text: 'Model Performance vs. Standard Algorithms', 
+                            font: { size: 16 } 
+                        },
                         tooltip: { 
                             backgroundColor: 'rgba(0, 0, 0, 0.8)',
                             callbacks: {
@@ -176,9 +230,15 @@
                             }
                         }
                     },
-                    scales: { y: { beginAtZero: true, title: { display: true, text: 'Metric Value' } } }
+                    scales: { 
+                        y: { 
+                            beginAtZero: true, 
+                            title: { display: true, text: 'Metric Value' } 
+                        } 
+                    }
                 }
             });
+
             const radarCtx = document.getElementById('performanceRadarChart').getContext('2d');
             performanceRadarChart = new Chart(radarCtx, {
                 type: 'radar',
@@ -189,8 +249,8 @@
                         data: [0, 0, 0, 0, 0],
                         fill: true,
                         backgroundColor: 'rgba(0, 105, 92, 0.2)',
-                        borderColor: 'var(--darkTeal)',
-                        pointBackgroundColor: 'var(--darkTeal)',
+                        borderColor: '#00695C',
+                        pointBackgroundColor: '#00695C',
                     }]
                 },
                 options: {
@@ -209,19 +269,35 @@
         }
         
         async function optimizePlacement() {
+            const btn = document.getElementById('optimizeBtn');
+            btn.disabled = true;
+            btn.textContent = 'Optimizing...';
+            
             try {
-                const response = await fetch(${API_BASE}/optimize, {method: 'POST'});
+                const response = await fetch(API_BASE + '/optimize', {method: 'POST'});
+                if (!response.ok) {
+                    throw new Error('Server returned ' + response.status);
+                }
                 const result = await response.json();
-                alert(Optimization complete! Block ${result.block_id} mined with ${result.transactions} transactions.);
-                refreshStats();
+                showSuccess('Optimization complete! Block ' + result.block_id + ' mined with ' + result.transactions + ' transactions.');
+                await refreshStats();
             } catch (error) {
-                alert('Error optimizing placement: ' + error.message);
+                showError('Error optimizing placement: ' + error.message);
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Run Optimization';
             }
         }
         
         async function refreshStats() {
+            const btn = document.getElementById('refreshBtn');
+            btn.disabled = true;
+            
             try {
-                const response = await fetch(${API_BASE}/stats);
+                const response = await fetch(API_BASE + '/stats');
+                if (!response.ok) {
+                    throw new Error('Server returned ' + response.status);
+                }
                 const stats = await response.json();
                 
                 const utilLabels = stats.node_statistics.map(n => n.node_id);
@@ -241,19 +317,20 @@
                     comparisonChart.data.datasets = stats.comparison_data.datasets;
                     comparisonChart.update();
                 }
+
                 if (stats.performance_metrics) {
                     const metrics = stats.performance_metrics;
-              
                     const successRate = metrics.success_rate;
 
                     const activeCpuNodes = cpuData.filter(d => d > 0);
-                    const avgCpuUtil = activeCpuNodes.length > 0 ? (activeCpuNodes.map(Number).reduce((a, b) => a + b, 0) / activeCpuNodes.length) / 100 : 0;
+                    const avgCpuUtil = activeCpuNodes.length > 0 ? 
+                        (activeCpuNodes.map(Number).reduce((a, b) => a + b, 0) / activeCpuNodes.length) / 100 : 0;
                     
                     const activeMemNodes = memoryData.filter(d => d > 0);
-                    const avgMemUtil = activeMemNodes.length > 0 ? (activeMemNodes.map(Number).reduce((a, b) => a + b, 0) / activeMemNodes.length) / 100 : 0;
+                    const avgMemUtil = activeMemNodes.length > 0 ? 
+                        (activeMemNodes.map(Number).reduce((a, b) => a + b, 0) / activeMemNodes.length) / 100 : 0;
 
                     const loadBalanceScore = 1 - (Math.min(metrics.load_balance_variance, 0.1) / 0.1); 
-                    
                     const txThroughput = stats.blockchain_blocks > 1 ? 1 : 0;
 
                     performanceRadarChart.data.datasets[0].data = [
@@ -266,16 +343,24 @@
                     performanceRadarChart.update();
                 }
 
-                const blockchainInfo = await (await fetch(${API_A_BASE}/blockchain)).json();
-                document.getElementById('blockchain-status').innerHTML = `
-                    <div class="stat-item"><h4>Blocks</h4><span>${blockchainInfo.blocks}</span></div>
-                    <div class="stat-item"><h4>Pending TXs</h4><span>${blockchainInfo.pending_transactions}</span></div>
-                    <div class="stat-item"><h4>Integrity</h4><span style="color: ${blockchainInfo.is_valid ? 'var(--darkTeal)' : '#F44336'}; font-weight: bold;">
-                        ${blockchainInfo.is_valid ? 'VALID' : 'INVALID'}
-                    </span></div>`;
+                const blockchainResponse = await fetch(API_BASE + '/blockchain');
+                if (!blockchainResponse.ok) {
+                    throw new Error('Failed to fetch blockchain info');
+                }
+                const blockchainInfo = await blockchainResponse.json();
+                
+                document.getElementById('blockchain-status').innerHTML = 
+                    '<div class="stat-item"><h4>Blocks</h4><span>' + blockchainInfo.blocks + '</span></div>' +
+                    '<div class="stat-item"><h4>Pending TXs</h4><span>' + blockchainInfo.pending_transactions + '</span></div>' +
+                    '<div class="stat-item"><h4>Integrity</h4><span style="color: ' + 
+                    (blockchainInfo.is_valid ? '#00695C' : '#F44336') + '; font-weight: bold;">' +
+                    (blockchainInfo.is_valid ? 'VALID' : 'INVALID') + '</span></div>';
 
             } catch (error) {
+                showError('Error refreshing stats: ' + error.message);
                 console.error('Error refreshing stats:', error);
+            } finally {
+                btn.disabled = false;
             }
         }
         

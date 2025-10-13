@@ -1,17 +1,11 @@
 from flask import Flask, jsonify, request
+from flask_cors import CORS 
 from main import VMPlacementSystem, PhysicalNode, VirtualMachine
 import json
 import numpy as np
 
-app = Flask(_name_)
-
-nodes, vms = create_sample_data()
-system = VMPlacementSystem(nodes)
-
-for vm in vms:
-    system.add_vm_request(vm)
-
-
+app = Flask(__name__) 
+CORS(app) 
 def create_sample_data():
     nodes = [
         PhysicalNode("node_1", 16.0, 32.0, 1000.0, 10.0, 0.15, "DC1"),
@@ -27,6 +21,13 @@ def create_sample_data():
         VirtualMachine("vm_5", 10.0, 20.0, 400.0, 5.0, 1, "user_e")
     ]
     return nodes, vms
+
+
+nodes, vms = create_sample_data()
+system = VMPlacementSystem(nodes)
+
+for vm in vms:
+    system.add_vm_request(vm)
 
 
 @app.route('/api/vm/request', methods=['POST'])
@@ -47,7 +48,6 @@ def request_vm_placement():
 
 @app.route('/api/optimize', methods=['POST'])
 def optimize_placement():
-    
     placement = system.optimize_placement()
     block = system.mine_block()
     return jsonify({
@@ -59,7 +59,6 @@ def optimize_placement():
 
 @app.route('/api/stats', methods=['GET'])
 def get_stats():
-
     stats = system.get_system_stats()
 
     active_cpu_utils = [
@@ -123,6 +122,17 @@ def get_blockchain_info():
     })
 
 
-if _name_ == '_main_':
-    optimize_placement()
+def initialize_system():
+    """Run initial optimization without returning Flask response"""
+    print("Running initial optimization...")
+    placement = system.optimize_placement()
+    block = system.mine_block()
+    print(f"Initial optimization complete!")
+    print(f"Placement: {len(placement)} VMs placed")
+    if block:
+        print(f"Block {block.block_id} mined with {len(block.transactions)} transactions")
+
+
+if __name__ == '__main__':  
+    initialize_system()  
     app.run(debug=True, host='0.0.0.0', port=5000)
