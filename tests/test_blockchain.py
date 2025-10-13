@@ -28,6 +28,6 @@ class TestBlockchain(unittest.TestCase):
             self.blockchain.mine_pending_transactions()
         
         self.assertTrue(self.blockchain.is_valid())
-
+#run
 if __name__ == '__main__':
     unittest.main()
