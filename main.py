@@ -97,6 +97,7 @@ class Transaction:
     timestamp: float
     requester: str
     gas_fee: float
+    efficiency_score: float = 0.0  # Overall efficiency of the placement
     
     def to_dict(self) -> Dict:
         return {
@@ -106,7 +107,30 @@ class Transaction:
             'action': self.action,
             'timestamp': self.timestamp,
             'requester': self.requester,
-            'gas_fee': self.gas_fee
+            'gas_fee': self.gas_fee,
+            'efficiency_score': self.efficiency_score
+        }
+
+@dataclass
+class PlacementDecision:
+    """Stores a complete placement decision with efficiency metrics"""
+    decision_id: str
+    placement: Dict[str, str]  # vm_id -> node_id mapping
+    timestamp: float
+    overall_efficiency: float
+    resource_utilization: float
+    energy_efficiency: float
+    load_balance_score: float
+    
+    def to_dict(self) -> Dict:
+        return {
+            'decision_id': self.decision_id,
+            'placement': self.placement,
+            'timestamp': self.timestamp,
+            'overall_efficiency': self.overall_efficiency,
+            'resource_utilization': self.resource_utilization,
+            'energy_efficiency': self.energy_efficiency,
+            'load_balance_score': self.load_balance_score
         }
 
 @dataclass
@@ -116,6 +140,7 @@ class Block:
     timestamp: float
     transactions: List[Transaction]
     merkle_root: str
+    placement_decision: Optional['PlacementDecision'] = None  # Store the placement decision
     nonce: int = 0
     hash: str = ""
     
@@ -144,7 +169,8 @@ class Block:
             'previous_hash': self.previous_hash,
             'timestamp': self.timestamp,
             'merkle_root': self.merkle_root,
-            'nonce': self.nonce
+            'nonce': self.nonce,
+            'placement_decision': self.placement_decision.to_dict() if self.placement_decision else None
         }
         return hashlib.sha256(json.dumps(block_data, sort_keys=True).encode()).hexdigest()
 
@@ -174,7 +200,7 @@ class Blockchain:
     def add_transaction(self, transaction: Transaction):
         self.pending_transactions.append(transaction)
     
-    def mine_pending_transactions(self) -> Block:
+    def mine_pending_transactions(self, placement_decision: Optional[PlacementDecision] = None) -> Block:
         if not self.pending_transactions:
             return None
         
@@ -183,7 +209,8 @@ class Blockchain:
             previous_hash=self.get_latest_block().hash,
             timestamp=time.time(),
             transactions=self.pending_transactions.copy(),
-            merkle_root=""
+            merkle_root="",
+            placement_decision=placement_decision
         )
         
         block.merkle_root = block.calculate_merkle_root()
@@ -210,6 +237,19 @@ class Blockchain:
                 return False
         
         return True
+    
+    def get_best_placement_from_ledger(self) -> Optional[PlacementDecision]:
+        """Retrieve the best placement decision from the blockchain ledger"""
+        best_decision = None
+        best_efficiency = -np.inf
+        
+        # Iterate through all blocks to find the best placement decision
+        for block in self.chain:
+            if block.placement_decision and block.placement_decision.overall_efficiency > best_efficiency:
+                best_efficiency = block.placement_decision.overall_efficiency
+                best_decision = block.placement_decision
+        
+        return best_decision
 
 class GameTheoryOptimizer:
     def __init__(self, nodes: List[PhysicalNode]):
@@ -358,6 +398,52 @@ class VMPlacementSystem:
         self.optimizer = GameTheoryOptimizer(nodes)
         self.placement_map = {}
     
+    def calculate_placement_efficiency(self, placement: Dict[str, str]) -> Tuple[float, float, float, float]:
+        """Calculate efficiency metrics for a given placement
+        Returns: (overall_efficiency, resource_utilization, energy_efficiency, load_balance_score)
+        """
+        if not placement:
+            return 0.0, 0.0, 0.0, 0.0
+        
+        # Calculate resource utilization across all nodes
+        total_utilization = 0.0
+        utilization_scores = []
+        for node in self.nodes:
+            capacity = node.get_capacity_vector()
+            usage = node.get_usage_vector()
+            if np.any(capacity > 0):
+                utilization = usage / capacity
+                node_util = np.mean(utilization)
+                utilization_scores.append(node_util)
+                total_utilization += node_util
+        
+        avg_resource_utilization = total_utilization / len(self.nodes) if self.nodes else 0.0
+        
+        # Calculate energy efficiency (lower energy cost per VM is better)
+        total_energy_cost = 0.0
+        for vm_id, node_id in placement.items():
+            node = next((n for n in self.nodes if n.node_id == node_id), None)
+            if node:
+                total_energy_cost += node.energy_cost
+        
+        avg_energy_cost = total_energy_cost / len(placement) if placement else 0.0
+        # Normalize: lower cost is better, so invert it
+        energy_efficiency = 1.0 / (1.0 + avg_energy_cost)
+        
+        # Calculate load balance score (lower variance is better)
+        load_balance_variance = np.var(utilization_scores) if len(utilization_scores) > 1 else 0.0
+        load_balance_score = 1.0 / (1.0 + load_balance_variance)
+        
+        # Calculate overall efficiency (weighted combination)
+        weights = [0.4, 0.3, 0.3]  # resource, energy, load balance
+        overall_efficiency = (
+            weights[0] * avg_resource_utilization +
+            weights[1] * energy_efficiency +
+            weights[2] * load_balance_score
+        )
+        
+        return overall_efficiency, avg_resource_utilization, energy_efficiency, load_balance_score
+    
     def add_vm_request(self, vm: VirtualMachine) -> bool:
         """Add a new VM placement request"""
         self.vms[vm.vm_id] = vm
@@ -376,16 +462,69 @@ class VMPlacementSystem:
         return True
     
     def optimize_placement(self) -> Dict[str, str]:
-        """Run game theory optimization and return placement decisions"""
+        """Run game theory optimization and return placement decisions
+        
+        This method compares the new placement with the best previous placement
+        stored in the blockchain ledger. If the new placement has worse overall
+        efficiency, it reverts to the previous best placement.
+        """
         active_vms = list(self.vms.values())
 
+        # Reset node usage to calculate new placement
         for node in self.nodes:
             node.cpu_used = node.memory_used = 0.0
             node.storage_used = node.network_used = 0.0
 
-        placement = self.optimizer.nash_equilibrium_placement(active_vms)
+        # Calculate new placement using game theory optimization
+        new_placement = self.optimizer.nash_equilibrium_placement(active_vms)
+        
+        # Calculate efficiency metrics for the new placement
+        new_efficiency, new_resource_util, new_energy_eff, new_load_balance = \
+            self.calculate_placement_efficiency(new_placement)
+        
+        # Retrieve the best previous placement from blockchain ledger
+        best_previous_decision = self.blockchain.get_best_placement_from_ledger()
+        
+        # Compare with previous best and decide which placement to use
+        final_placement = new_placement
+        final_efficiency = new_efficiency
+        final_resource_util = new_resource_util
+        final_energy_eff = new_energy_eff
+        final_load_balance = new_load_balance
+        
+        if best_previous_decision:
+            print(f"\n[Blockchain Ledger] Comparing placements:")
+            print(f"  Previous Best Efficiency: {best_previous_decision.overall_efficiency:.4f}")
+            print(f"  New Placement Efficiency: {new_efficiency:.4f}")
+            
+            if new_efficiency < best_previous_decision.overall_efficiency:
+                print(f"  ⚠️  New placement is WORSE than previous best!")
+                print(f"  🔄 Reverting to previous best placement from block {best_previous_decision.decision_id}")
+                
+                # Revert to previous best placement
+                final_placement = best_previous_decision.placement
+                final_efficiency = best_previous_decision.overall_efficiency
+                final_resource_util = best_previous_decision.resource_utilization
+                final_energy_eff = best_previous_decision.energy_efficiency
+                final_load_balance = best_previous_decision.load_balance_score
+                
+                # Reset nodes and apply the previous best placement
+                for node in self.nodes:
+                    node.cpu_used = node.memory_used = 0.0
+                    node.storage_used = node.network_used = 0.0
+                
+                for vm_id, node_id in final_placement.items():
+                    vm = self.vms.get(vm_id)
+                    node = next((n for n in self.nodes if n.node_id == node_id), None)
+                    if vm and node:
+                        node.allocate_vm(vm)
+            else:
+                print(f"  ✅ New placement is BETTER! Accepting new placement.")
+        else:
+            print(f"\n[Blockchain Ledger] No previous placement found. Using new placement.")
 
-        for vm_id, node_id in placement.items():
+        # Add transactions for the final placement
+        for vm_id, node_id in final_placement.items():
             tx = Transaction(
                 tx_id=f"tx_{len(self.blockchain.pending_transactions)}",
                 vm_id=vm_id,
@@ -393,16 +532,41 @@ class VMPlacementSystem:
                 action="allocate",
                 timestamp=time.time(),
                 requester="system",
-                gas_fee=0.05
+                gas_fee=0.05,
+                efficiency_score=final_efficiency
             )
             self.blockchain.add_transaction(tx)
         
-        self.placement_map = placement
-        return placement
+        self.placement_map = final_placement
+        return final_placement
     
     def mine_block(self) -> Optional[Block]:
-        """Mine a new block with pending transactions"""
-        return self.blockchain.mine_pending_transactions()
+        """Mine a new block with pending transactions and placement decision"""
+        if not self.placement_map:
+            return self.blockchain.mine_pending_transactions()
+        
+        # Calculate efficiency metrics for current placement
+        overall_eff, resource_util, energy_eff, load_balance = \
+            self.calculate_placement_efficiency(self.placement_map)
+        
+        # Create placement decision record
+        decision = PlacementDecision(
+            decision_id=str(len(self.blockchain.chain)),
+            placement=self.placement_map.copy(),
+            timestamp=time.time(),
+            overall_efficiency=overall_eff,
+            resource_utilization=resource_util,
+            energy_efficiency=energy_eff,
+            load_balance_score=load_balance
+        )
+        
+        print(f"\n[Mining Block] Storing placement decision:")
+        print(f"  Overall Efficiency: {overall_eff:.4f}")
+        print(f"  Resource Utilization: {resource_util:.4f}")
+        print(f"  Energy Efficiency: {energy_eff:.4f}")
+        print(f"  Load Balance Score: {load_balance:.4f}")
+        
+        return self.blockchain.mine_pending_transactions(placement_decision=decision)
     
     def get_system_stats(self) -> Dict:
         """Get current system statistics"""

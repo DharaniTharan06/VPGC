@@ -122,6 +122,41 @@ def get_blockchain_info():
     })
 
 
+@app.route('/api/blockchain/ledger', methods=['GET'])
+def get_blockchain_ledger():
+    """Get complete blockchain ledger with placement decisions"""
+    ledger = []
+    best_decision = system.blockchain.get_best_placement_from_ledger()
+    
+    for block in system.blockchain.chain:
+        block_info = {
+            'block_id': block.block_id,
+            'timestamp': block.timestamp,
+            'hash': block.hash[:16] + '...',
+            'transactions': len(block.transactions),
+            'placement_decision': None
+        }
+        
+        if block.placement_decision:
+            block_info['placement_decision'] = {
+                'decision_id': block.placement_decision.decision_id,
+                'overall_efficiency': round(block.placement_decision.overall_efficiency, 4),
+                'resource_utilization': round(block.placement_decision.resource_utilization, 4),
+                'energy_efficiency': round(block.placement_decision.energy_efficiency, 4),
+                'load_balance_score': round(block.placement_decision.load_balance_score, 4),
+                'placement_count': len(block.placement_decision.placement),
+                'is_best': (best_decision and 
+                           block.placement_decision.decision_id == best_decision.decision_id)
+            }
+        
+        ledger.append(block_info)
+    
+    return jsonify({
+        'ledger': ledger,
+        'best_efficiency': round(best_decision.overall_efficiency, 4) if best_decision else None
+    })
+
+
 def initialize_system():
     """Run initial optimization without returning Flask response"""
     print("Running initial optimization...")
